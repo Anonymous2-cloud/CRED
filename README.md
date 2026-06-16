@@ -40,8 +40,7 @@ configured yet — so it deploys and renders before you wire up any services.
 
 ```
 .
-├── public/
-│   └── index.html      # Landing page (live API + demo fallback)
+├── index.html          # Landing page (live API + demo fallback), served at /
 ├── api/
 │   └── index.js        # Vercel serverless entry (exports the Express app)
 ├── app.js              # Express app factory (shared by Vercel + local dev)
@@ -62,8 +61,9 @@ configured yet — so it deploys and renders before you wire up any services.
 
 1. **Push this repo to GitHub.**
 2. On [vercel.com](https://vercel.com): **New Project → import the repo.**
-   No build settings needed — Vercel auto-detects the static `public/`
-   directory and the `api/` serverless function.
+   `vercel.json` already wires it up — `index.html` is served at `/` and
+   `/api/*` + `/webhook/*` route to the serverless function. No build
+   settings needed.
 3. **Add environment variables** (Project → Settings → Environment Variables),
    using `.env.example` as the reference:
    - `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`

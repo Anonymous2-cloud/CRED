@@ -24,9 +24,12 @@ export function createApp() {
   app.use(express.json({ limit: '2mb' }));
 
   // ─── STATIC FRONTEND ────────────────────────────────────────
-  // Serves public/ for local dev. On Vercel the CDN serves these files
-  // directly; only /api/* and /webhook/* are routed to this function.
-  app.use(express.static(path.join(__dirname, 'public')));
+  // Serves the landing page for local dev. On Vercel, index.html is served
+  // by the static build (see vercel.json) and only /api/* and /webhook/*
+  // are routed to this function — so this handler is local-dev only.
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  });
 
   // ─── HEALTH CHECK ───────────────────────────────────────────
   app.get('/api', (req, res) => {
