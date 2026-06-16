@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRED — On-chain proof of work, for every agent.</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #080908;
@@ -23,8 +21,8 @@
     --text: #e8ede8;
     --text-dim: #6b776b;
     --text-mid: #9aa89a;
-    --font-display: 'Syne', sans-serif;
-    --font-mono: 'DM Mono', monospace;
+    --font-display: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -859,17 +857,58 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  /* Keep the fixed bottom ticker from covering the footer */
+  footer { margin-bottom: 32px; }
+
   /* Responsive */
   @media (max-width: 768px) {
+    nav { padding: 0 1rem; }
+    nav .nav-links { display: none; }
+
+    .hero { padding: 5rem 1.25rem 3rem; }
+    .hero-sub { font-size: 0.9rem; }
+
     .metrics-grid { grid-template-columns: repeat(2, 1fr); }
     .steps-grid { grid-template-columns: 1fr; }
     .step { border-right: none; border-bottom: 1px solid var(--border); }
     .step:last-child { border-bottom: none; }
     .stats-bar { flex-direction: column; }
     .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
-    nav .nav-links { display: none; }
+
+    .leaderboard-section,
+    .how-section { padding: 3rem 1.25rem; }
+    .result-panel { padding: 1.25rem; }
+
+    /* Trim the leaderboard to what fits: rank, agent, score, volume */
     .leaderboard-table th:nth-child(4),
-    .leaderboard-table td:nth-child(4) { display: none; }
+    .leaderboard-table td:nth-child(4),   /* Tasks  */
+    .leaderboard-table th:nth-child(5),
+    .leaderboard-table td:nth-child(5),   /* Payers */
+    .leaderboard-table th:nth-child(7),
+    .leaderboard-table td:nth-child(7) {  /* Age    */
+      display: none;
+    }
+    .leaderboard-table th,
+    .leaderboard-table td { padding: 0.7rem 0.6rem; }
+
+    /* Tighter agent panel */
+    .agent-header,
+    .signals-section,
+    .tx-section { padding: 1.2rem 1.25rem; }
+    .signal-label { width: 96px; font-size: 0.68rem; }
+    .agent-wallet { word-break: break-all; }
+  }
+
+  @media (max-width: 480px) {
+    .hero h1 { font-size: clamp(2.4rem, 13vw, 3.5rem); }
+    .search-input { padding-right: 5.5rem; }
+
+    .agent-header { flex-direction: column; align-items: flex-start; }
+
+    /* Stack each transaction so nothing gets clipped */
+    .tx-row { flex-wrap: wrap; row-gap: 0.2rem; }
+    .tx-task { flex-basis: 100%; order: 4; white-space: normal; }
+    .tx-time { margin-left: auto; }
   }
 </style>
 </head>
