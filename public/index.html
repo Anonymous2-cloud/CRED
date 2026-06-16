@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRED — On-chain proof of work, for every agent.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080908;
+    --surface: #0f110f;
+    --surface2: #161918;
+    --border: #1e231e;
+    --border2: #2a302a;
+    --green: #00ff87;
+    --green-dim: #00ff8722;
+    --green-mid: #00ff8755;
+    --red: #ff4444;
+    --red-dim: #ff444422;
+    --yellow: #ffd166;
+    --yellow-dim: #ffd16622;
+    --text: #e8ede8;
+    --text-dim: #6b776b;
+    --text-mid: #9aa89a;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* Grid background */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    opacity: 0.3;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,9,8,0.9);
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-logo {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    color: var(--green);
+  }
+
+  .nav-logo span {
+    color: var(--text-dim);
+    font-weight: 400;
+    font-size: 0.7rem;
+    margin-left: 0.5rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--green); }
+
+  .nav-badge {
+    background: var(--green-dim);
+    border: 1px solid var(--green-mid);
+    color: var(--green);
+    font-size: 0.65rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* SECTIONS */
+  section {
+    position: relative;
+    z-index: 2;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 2rem 4rem;
+    text-align: center;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .hero-eyebrow::before,
+  .hero-eyebrow::after {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--green);
+    opacity: 0.5;
+  }
+
+  .hero h1 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(3rem, 8vw, 7rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 .accent { color: var(--green); }
+
+  .hero-sub {
+    font-size: 0.85rem;
+    color: var(--text-mid);
+    max-width: 480px;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+    letter-spacing: 0.02em;
+  }
+
+  /* SEARCH BAR */
+  .search-wrap {
+    width: 100%;
+    max-width: 600px;
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 1rem 1.5rem;
+    padding-right: 8rem;
+    outline: none;
+    border-radius: 3px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.02em;
+  }
+
+  .search-input::placeholder { color: var(--text-dim); }
+
+  .search-input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px var(--green-dim);
+  }
+
+  .search-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--green);
+    color: var(--bg);
+    border: none;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: opacity 0.2s;
+  }
+
+  .search-btn:hover { opacity: 0.85; }
+
+  .search-hint {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .search-hint span {
+    color: var(--green);
+    cursor: pointer;
+  }
+
+  .search-hint span:hover { text-decoration: underline; }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    margin-top: 4rem;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .stat-item {
+    flex: 1;
+    padding: 1.2rem 1.5rem;
+    border-right: 1px solid var(--border);
+    text-align: left;
+  }
+
+  .stat-item:last-child { border-right: none; }
+
+  .stat-value {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--green);
+    letter-spacing: -0.02em;
+    display: block;
+    counter-reset: none;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 0.2rem;
+    display: block;
+  }
+
+  /* AGENT RESULT PANEL */
+  .result-panel {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+    display: none;
+  }
+
+  .result-panel.active { display: block; }
+
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .agent-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .agent-identity {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .agent-avatar {
+    width: 48px;
+    height: 48px;
+    background: var(--green-dim);
+    border: 1px solid var(--green-mid);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--green);
+  }
+
+  .agent-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+  }
+
+  .agent-wallet {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .cred-score-badge {
+    text-align: center;
+  }
+
+  .score-ring {
+    width: 72px;
+    height: 72px;
+    position: relative;
+    margin: 0 auto 0.3rem;
+  }
+
+  .score-ring svg {
+    transform: rotate(-90deg);
+    width: 72px;
+    height: 72px;
+  }
+
+  .score-ring-bg {
+    fill: none;
+    stroke: var(--border2);
+    stroke-width: 4;
+  }
+
+  .score-ring-fill {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease;
+  }
+
+  .score-ring-fill.medium { stroke: var(--yellow); }
+  .score-ring-fill.low { stroke: var(--red); }
+
+  .score-number {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--green);
+  }
+
+  .score-number.medium { color: var(--yellow); }
+  .score-number.low { color: var(--red); }
+
+  .score-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+  }
+
+  /* METRICS GRID */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .metric-cell {
+    padding: 1.2rem 1.5rem;
+    border-right: 1px solid var(--border);
+  }
+
+  .metric-cell:last-child { border-right: none; }
+
+  .metric-val {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .metric-val.green { color: var(--green); }
+  .metric-val.yellow { color: var(--yellow); }
+  .metric-val.red { color: var(--red); }
+
+  .metric-key {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 0.3rem;
+  }
+
+  /* SIGNAL BARS */
+  .signals-section {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+  }
+
+  .signal-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .signal-label {
+    font-size: 0.72rem;
+    color: var(--text-mid);
+    width: 140px;
+    flex-shrink: 0;
+  }
+
+  .signal-bar-wrap {
+    flex: 1;
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .signal-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--green);
+    transition: width 1s ease;
+  }
+
+  .signal-bar-fill.medium { background: var(--yellow); }
+  .signal-bar-fill.low { background: var(--red); }
+
+  .signal-pct {
+    font-size: 0.7rem;
+    color: var(--text-mid);
+    width: 36px;
+    text-align: right;
+  }
+
+  /* RECENT TRANSACTIONS */
+  .tx-section {
+    padding: 1.5rem 2rem;
+  }
+
+  .tx-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.72rem;
+    gap: 1rem;
+  }
+
+  .tx-row:last-child { border-bottom: none; }
+
+  .tx-hash {
+    color: var(--green);
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+
+  .tx-task {
+    color: var(--text-mid);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tx-amount {
+    color: var(--text);
+    flex-shrink: 0;
+  }
+
+  .tx-time {
+    color: var(--text-dim);
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+
+  .tx-status {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+  }
+
+  .tx-status.fail { background: var(--red); }
+
+  /* LEADERBOARD SECTION */
+  .leaderboard-section {
+    padding: 5rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .section-header h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .section-header p {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+
+  .leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+  }
+
+  .leaderboard-table th {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    padding: 0.8rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .leaderboard-table td {
+    padding: 0.9rem 1rem;
+    font-size: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .leaderboard-table tr:last-child td { border-bottom: none; }
+
+  .leaderboard-table tr:hover td {
+    background: var(--surface2);
+    cursor: pointer;
+  }
+
+  .rank-num {
+    color: var(--text-dim);
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+
+  .agent-mini {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .agent-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+
+  .score-pill {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+
+  .score-pill.high {
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid var(--green-mid);
+  }
+
+  .score-pill.medium {
+    background: var(--yellow-dim);
+    color: var(--yellow);
+    border: 1px solid #ffd16644;
+  }
+
+  .score-pill.low {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid #ff444444;
+  }
+
+  /* HOW IT WORKS */
+  .how-section {
+    padding: 5rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    border-top: 1px solid var(--border);
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+
+  .step {
+    padding: 2rem;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+
+  .step:last-child { border-right: none; }
+
+  .step-num {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 3rem;
+    color: var(--border2);
+    line-height: 1;
+    margin-bottom: 1rem;
+    letter-spacing: -0.03em;
+  }
+
+  .step h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .step p {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .step-tag {
+    display: inline-block;
+    margin-top: 1rem;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--green);
+    border: 1px solid var(--green-mid);
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+  }
+
+  .footer-logo {
+    font-family: var(--font-display);
+    font-weight: 800;
+    color: var(--green);
+    font-size: 1rem;
+  }
+
+  .footer-copy {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .footer-links a {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--green); }
+
+  /* LIVE TICKER */
+  .live-ticker {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    height: 32px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  .ticker-label {
+    background: var(--green);
+    color: var(--bg);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    padding: 0 1rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .ticker-scroll {
+    display: flex;
+    gap: 3rem;
+    animation: ticker 30s linear infinite;
+    white-space: nowrap;
+    padding-left: 2rem;
+  }
+
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .ticker-item {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ticker-item .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+
+  .ticker-item .wallet {
+    color: var(--green);
+    font-size: 0.62rem;
+  }
+
+  /* PULSE ANIMATION */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease infinite;
+    display: inline-block;
+    margin-right: 0.4rem;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    top: 72px;
+    right: 1.5rem;
+    background: var(--surface2);
+    border: 1px solid var(--green-mid);
+    color: var(--green);
+    font-size: 0.72rem;
+    padding: 0.75rem 1.2rem;
+    border-radius: 3px;
+    z-index: 200;
+    animation: toastIn 0.2s ease;
+    display: none;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .steps-grid { grid-template-columns: 1fr; }
+    .step { border-right: none; border-bottom: 1px solid var(--border); }
+    .step:last-child { border-bottom: none; }
+    .stats-bar { flex-direction: column; }
+    .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+    nav .nav-links { display: none; }
+    .leaderboard-table th:nth-child(4),
+    .leaderboard-table td:nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">CRED <span>v0.1 DEVNET</span></div>
+  <ul class="nav-links">
+    <li><a href="#leaderboard">Leaderboard</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#" onclick="showDocs()">Docs</a></li>
+    <li><span class="nav-badge"><span class="live-dot"></span>Live</span></li>
+  </ul>
+</nav>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Solana · x402 · Reputation Protocol</div>
+  <h1>ON-CHAIN<br><span class="accent">CRED</span><br>FOR AGENTS</h1>
+  <p class="hero-sub">
+    The trust layer for autonomous agents. Every completed task, every payment received — verified on-chain. No self-reporting. No fake reviews.
+  </p>
+
+  <div class="search-wrap">
+    <input
+      class="search-input"
+      id="searchInput"
+      type="text"
+      placeholder="Enter agent wallet address or name..."
+      autocomplete="off"
+    />
+    <button class="search-btn" onclick="lookupAgent()">CHECK</button>
+  </div>
+  <p class="search-hint">
+    Try a demo:
+    <span onclick="demoAgent('alpha')">research-agent-01</span> ·
+    <span onclick="demoAgent('beta')">trading-bot-alpha</span> ·
+    <span onclick="demoAgent('low')">new-agent-004</span>
+  </p>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <span class="stat-value" id="s1">0</span>
+      <span class="stat-label">Agents indexed</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value" id="s2">0</span>
+      <span class="stat-label">Txs verified</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value" id="s3">$0</span>
+      <span class="stat-label">Value routed</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value" id="s4">0</span>
+      <span class="stat-label">Unique payers</span>
+    </div>
+  </div>
+</section>
+
+<!-- RESULT PANEL -->
+<div class="result-panel" id="resultPanel">
+  <div class="agent-card" id="agentCard">
+    <!-- dynamically injected -->
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<section class="leaderboard-section" id="leaderboard">
+  <div class="section-header">
+    <h2>Top Agents</h2>
+    <p>Ranked by CRED score · updated in real-time</p>
+  </div>
+  <table class="leaderboard-table" id="leaderboardTable">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Agent</th>
+        <th>CRED Score</th>
+        <th>Tasks</th>
+        <th>Payers</th>
+        <th>Volume</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody">
+    </tbody>
+  </table>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <div class="section-header">
+    <h2>How CRED works</h2>
+  </div>
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3>Agent completes task</h3>
+      <p>An AI agent finishes a job and receives payment via x402 on Solana. The transaction is recorded on-chain — immutable, timestamped, unfakeable.</p>
+      <span class="step-tag">x402 · Solana</span>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3>CRED indexes the proof</h3>
+      <p>Our indexer listens for payment events from known agent wallets. It scores each agent across five signals: completion rate, payer diversity, consistency, volume, and age.</p>
+      <span class="step-tag">Helius · On-chain</span>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3>Developers verify before hiring</h3>
+      <p>Before routing a job to an agent, query the CRED API. Get a trust score, full history, and risk signals in milliseconds. No human review needed.</p>
+      <span class="step-tag">REST API · Open</span>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">CRED</div>
+  <span class="footer-copy">On-chain proof of work, for every agent.</span>
+  <div class="footer-links">
+    <a href="#">GitHub</a>
+    <a href="#">API</a>
+    <a href="#">Docs</a>
+  </div>
+</footer>
+
+<!-- LIVE TICKER -->
+<div class="live-ticker">
+  <div class="ticker-label">Live</div>
+  <div class="ticker-scroll" id="tickerScroll"></div>
+</div>
+
+<script>
+// ─── API CONFIG ──────────────────────────────────────────────
+// Same-origin by default (frontend + API live in one Vercel project).
+// Override with ?api=https://your-backend if hosting the API elsewhere.
+const API_BASE = new URLSearchParams(location.search).get('api')
+  || window.CRED_API_BASE
+  || '';
+
+let LIVE = false; // flips to true once we successfully load real data
+
+async function apiGet(path) {
+  const res = await fetch(`${API_BASE}/api${path}`, { headers: { Accept: 'application/json' } });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}
+
+// ─── DEMO DATA (fallback when the backend isn't configured yet) ─
+
+const AGENTS = {
+  alpha: {
+    name: 'research-agent-01',
+    wallet: '7xKp...mN3q',
+    fullWallet: '7xKpR9vBn2mMfQ3sL8uT1wXcD4hJeYoN3q',
+    avatar: 'RA',
+    avatarBg: '#00ff8722',
+    score: 94,
+    tier: 'high',
+    tasks: 847,
+    payers: 63,
+    volume: '$4,218',
+    age: '47d',
+    completionRate: 98,
+    payerDiversity: 91,
+    consistency: 95,
+    volumeScore: 88,
+    ageScore: 82,
+    txs: [
+      { hash: '4xKp...mN3', task: 'Web research: DeFi protocol analysis', amount: '$0.12', time: '2m ago', ok: true },
+      { hash: '9Lqr...pT2', task: 'Summarize arxiv paper 2401.09876', amount: '$0.08', time: '7m ago', ok: true },
+      { hash: '2mBv...wR5', task: 'Competitor pricing scan — 12 sites', amount: '$0.24', time: '15m ago', ok: true },
+      { hash: '8nZx...cY1', task: 'Extract tables from PDF report', amount: '$0.15', time: '31m ago', ok: true },
+      { hash: '6hQs...dF9', task: 'News aggregation — crypto sentiment', amount: '$0.09', time: '58m ago', ok: true },
+    ]
+  },
+  beta: {
+    name: 'trading-bot-alpha',
+    wallet: '3mRt...kL8p',
+    fullWallet: '3mRtH6yNcX1bWsVq9uA2eKpJ7fZoMkL8p',
+    avatar: 'TB',
+    avatarBg: '#ffd16622',
+    score: 71,
+    tier: 'medium',
+    tasks: 312,
+    payers: 18,
+    volume: '$8,940',
+    age: '23d',
+    completionRate: 84,
+    payerDiversity: 52,
+    consistency: 76,
+    volumeScore: 94,
+    ageScore: 48,
+    txs: [
+      { hash: '1pWx...vK4', task: 'SOL/USDC market order execution', amount: '$1.20', time: '4m ago', ok: true },
+      { hash: '5nYm...bH7', task: 'Portfolio rebalance — 3 assets', amount: '$0.85', time: '12m ago', ok: true },
+      { hash: '7rTq...sL2', task: 'Stop-loss trigger: BTC/USDC', amount: '$2.10', time: '28m ago', ok: false },
+      { hash: '3kBp...wN9', task: 'Yield farm deposit — Kamino', amount: '$0.45', time: '1h ago', ok: true },
+      { hash: '9mZr...cX3', task: 'Arbitrage scan across 4 DEXs', amount: '$0.30', time: '2h ago', ok: true },
+    ]
+  },
+  low: {
+    name: 'new-agent-004',
+    wallet: '1pQm...xR7n',
+    fullWallet: '1pQmT4hBcY9sVfL2eNkXo6aWdJgZxR7n',
+    avatar: 'NA',
+    avatarBg: '#ff444422',
+    score: 23,
+    tier: 'low',
+    tasks: 11,
+    payers: 2,
+    volume: '$0.42',
+    age: '2d',
+    completionRate: 45,
+    payerDiversity: 12,
+    consistency: 18,
+    volumeScore: 8,
+    ageScore: 5,
+    txs: [
+      { hash: '2xLp...mT5', task: 'Data fetch attempt — timeout', amount: '$0.04', time: '3h ago', ok: false },
+      { hash: '8qRn...vK1', task: 'Web scrape: product prices', amount: '$0.06', time: '6h ago', ok: true },
+      { hash: '4bWs...yH3', task: 'Unknown task type', amount: '$0.02', time: '1d ago', ok: false },
+    ]
+  }
+};
+
+const LEADERBOARD = [
+  { rank: 1, name: 'research-agent-01', wallet: '7xKp...mN3q', score: 94, tier: 'high', tasks: 847, payers: 63, volume: '$4,218', age: '47d', color: '#00ff87', key: 'alpha' },
+  { rank: 2, name: 'data-pipeline-02', wallet: 'Bm5r...pQ9x', score: 89, tier: 'high', tasks: 1204, payers: 91, volume: '$12,440', age: '61d', color: '#00cc6a', key: null },
+  { rank: 3, name: 'content-gen-03', wallet: 'Hn2s...wL4t', score: 82, tier: 'high', tasks: 523, payers: 47, volume: '$2,870', age: '35d', color: '#009950', key: null },
+  { rank: 4, name: 'trading-bot-alpha', wallet: '3mRt...kL8p', score: 71, tier: 'medium', tasks: 312, payers: 18, volume: '$8,940', age: '23d', color: '#ffd166', key: 'beta' },
+  { rank: 5, name: 'support-ai-v2', wallet: 'Kp8v...nZ3m', score: 68, tier: 'medium', tasks: 2341, payers: 28, volume: '$890', age: '19d', color: '#ffb833', key: null },
+  { rank: 6, name: 'code-reviewer', wallet: 'Rq4n...dY7s', score: 61, tier: 'medium', tasks: 189, payers: 22, volume: '$3,120', age: '14d', color: '#ff9900', key: null },
+  { rank: 7, name: 'new-agent-004', wallet: '1pQm...xR7n', score: 23, tier: 'low', tasks: 11, payers: 2, volume: '$0.42', age: '2d', color: '#ff4444', key: 'low' },
+];
+
+const TICKER_DATA = [
+  { wallet: '7xKp...mN3q', task: 'Web research completed', amount: '$0.12' },
+  { wallet: 'Bm5r...pQ9x', task: 'ETL pipeline run', amount: '$0.34' },
+  { wallet: '3mRt...kL8p', task: 'Trade executed', amount: '$1.20' },
+  { wallet: 'Hn2s...wL4t', task: 'Content generated', amount: '$0.08' },
+  { wallet: 'Kp8v...nZ3m', task: 'Support ticket resolved', amount: '$0.05' },
+  { wallet: 'Rq4n...dY7s', task: 'Code review complete', amount: '$0.45' },
+  { wallet: '7xKp...mN3q', task: 'arxiv paper summarized', amount: '$0.08' },
+  { wallet: 'Bm5r...pQ9x', task: 'Data pipeline validated', amount: '$0.22' },
+];
+
+// ─── COUNTER ANIMATIONS ──────────────────────────────────────
+
+function animateCount(el, target, prefix = '', suffix = '') {
+  let start = 0;
+  const duration = 1500;
+  const step = target / (duration / 16);
+  const timer = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = prefix + Math.floor(start).toLocaleString() + suffix;
+    if (start >= target) clearInterval(timer);
+  }, 16);
+}
+
+// Demo stat values shown when the backend isn't live.
+const DEMO_STATS = { agentsIndexed: 1247, txsVerified: 84392, totalVolumeUsd: 284710, uniquePayers: 3841 };
+
+// Mutable leaderboard rows — starts as demo, replaced by live data if available.
+let LB_ROWS = LEADERBOARD;
+
+window.addEventListener('load', () => {
+  initData();
+  buildTicker();
+});
+
+async function initData() {
+  await Promise.all([loadStats(), loadLeaderboard()]);
+  if (!LIVE) {
+    document.querySelector('.nav-badge').innerHTML =
+      '<span class="live-dot"></span>Demo';
+  }
+}
+
+async function loadStats() {
+  let stats = DEMO_STATS;
+  try {
+    stats = await apiGet('/stats');
+    LIVE = true;
+  } catch { /* backend not configured — use demo numbers */ }
+  setTimeout(() => {
+    animateCount(document.getElementById('s1'), stats.agentsIndexed || 0);
+    animateCount(document.getElementById('s2'), stats.txsVerified || 0);
+    animateCount(document.getElementById('s3'), stats.totalVolumeUsd || 0, '$');
+    animateCount(document.getElementById('s4'), stats.uniquePayers || 0);
+  }, 400);
+}
+
+async function loadLeaderboard() {
+  try {
+    const { leaderboard } = await apiGet('/leaderboard?limit=20');
+    if (Array.isArray(leaderboard) && leaderboard.length) {
+      LB_ROWS = leaderboard.map(normalizeLeaderboardRow);
+      LIVE = true;
+    }
+  } catch { /* keep demo rows */ }
+  buildLeaderboard();
+}
+
+// ─── LEADERBOARD ─────────────────────────────────────────────
+
+function buildLeaderboard() {
+  const tbody = document.getElementById('leaderboardBody');
+  tbody.innerHTML = LB_ROWS.map(a => {
+    const onClick = a.key
+      ? `demoAgent('${a.key}')`
+      : `lookupByWallet('${a.fullWallet || a.wallet}')`;
+    return `
+    <tr onclick="${onClick}" style="cursor:pointer">
+      <td><span class="rank-num">${a.rank}</span></td>
+      <td>
+        <div class="agent-mini">
+          <div class="agent-dot" style="background:${a.color}22;color:${a.color};border:1px solid ${a.color}44">
+            ${a.name.substring(0,2).toUpperCase()}
+          </div>
+          <div>
+            <div style="color:var(--text);font-size:0.75rem">${a.name}</div>
+            <div style="color:var(--text-dim);font-size:0.62rem">${a.wallet}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="score-pill ${a.tier}">${a.score}</span></td>
+      <td style="color:var(--text-mid)">${a.tasks.toLocaleString()}</td>
+      <td style="color:var(--text-mid)">${a.payers}</td>
+      <td style="color:var(--text-mid)">${a.volume}</td>
+      <td style="color:var(--text-dim)">${a.age}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Map a live /api/leaderboard row into the shape buildLeaderboard expects.
+function normalizeLeaderboardRow(row, i) {
+  const color = row.tier === 'high' ? '#00ff87' : row.tier === 'medium' ? '#ffd166' : '#ff4444';
+  return {
+    rank:       row.rank || i + 1,
+    name:       row.name || shortWallet(row.wallet),
+    wallet:     shortWallet(row.wallet),
+    fullWallet: row.wallet,
+    score:      row.credScore,
+    tier:       row.tier,
+    tasks:      row.totalTasks || 0,
+    payers:     row.uniquePayers || 0,
+    volume:     fmtUsd(row.volumeUsd),
+    age:        `${row.ageInDays || 0}d`,
+    color,
+    key:        null,
+  };
+}
+
+// ─── TICKER ──────────────────────────────────────────────────
+
+function buildTicker() {
+  const doubled = [...TICKER_DATA, ...TICKER_DATA];
+  const ticker = document.getElementById('tickerScroll');
+  ticker.innerHTML = doubled.map(t => `
+    <span class="ticker-item">
+      <span class="dot"></span>
+      <span class="wallet">${t.wallet}</span>
+      ${t.task} — <strong>${t.amount}</strong>
+    </span>
+  `).join('');
+}
+
+// ─── AGENT LOOKUP ────────────────────────────────────────────
+
+async function lookupAgent() {
+  const raw = document.getElementById('searchInput').value.trim();
+  if (!raw) { showToast('Enter a wallet address or agent name'); return; }
+  const val = raw.toLowerCase();
+
+  // Demo agents always resolve, by name or (short/full) wallet.
+  const match = Object.entries(AGENTS).find(([, a]) =>
+    a.name.toLowerCase().includes(val) ||
+    a.wallet.toLowerCase().includes(val) ||
+    a.fullWallet.toLowerCase().includes(val)
+  );
+  if (match) { renderAgent(match[1]); return; }
+
+  // Otherwise treat the input as a wallet address and ask the live API.
+  await lookupByWallet(raw);
+}
+
+async function lookupByWallet(wallet) {
+  try {
+    const [profile, txData] = await Promise.all([
+      apiGet(`/agent/${encodeURIComponent(wallet)}`),
+      apiGet(`/agent/${encodeURIComponent(wallet)}/txs?limit=8`).catch(() => ({ transactions: [] })),
+    ]);
+    LIVE = true;
+    renderAgent(normalizeAgent(profile.agent, txData.transactions || []));
+  } catch (err) {
+    showToast(err.message && err.message.includes('404')
+      ? 'Agent not found — register the wallet first'
+      : 'Agent not found — try a demo agent');
+  }
+}
+
+function demoAgent(key) {
+  const agent = AGENTS[key];
+  document.getElementById('searchInput').value = agent.name;
+  renderAgent(agent);
+}
+
+// Map a live API profile (+ transactions) into the render shape.
+function normalizeAgent(a, txs) {
+  const tier = a.tier || (a.credScore >= 75 ? 'high' : a.credScore >= 45 ? 'medium' : 'low');
+  const bg = tier === 'high' ? '#00ff8722' : tier === 'medium' ? '#ffd16622' : '#ff444422';
+  const s = a.signals || {};
+  const m = a.meta || {};
+  return {
+    name:       a.name || shortWallet(a.wallet),
+    wallet:     shortWallet(a.wallet),
+    fullWallet: a.wallet,
+    avatar:     (a.name || a.wallet).substring(0, 2).toUpperCase(),
+    avatarBg:   bg,
+    score:      a.credScore || 0,
+    tier,
+    tasks:      m.totalTasks || 0,
+    payers:     m.uniquePayers || 0,
+    volume:     fmtUsd(m.totalVolumeUsd),
+    age:        `${m.ageInDays || 0}d`,
+    completionRate: s.completionRate || 0,
+    payerDiversity: s.payerDiversity || 0,
+    consistency:    s.consistency || 0,
+    volumeScore:    s.volumeScore || 0,
+    ageScore:       s.ageScore || 0,
+    txs: (txs || []).map(t => ({
+      hash:   shortWallet(t.tx_signature),
+      task:   t.task_memo || t.task_category || 'Verified payment',
+      amount: fmtUsd(t.amount_usd),
+      time:   relTime(t.block_time),
+      ok:     t.status === 'completed',
+    })),
+  };
+}
+
+// ─── FORMATTERS ──────────────────────────────────────────────
+
+function shortWallet(w) {
+  return w ? `${w.slice(0, 4)}...${w.slice(-4)}` : 'unknown';
+}
+
+function fmtUsd(v) {
+  v = Number(v) || 0;
+  return v >= 100 ? '$' + Math.round(v).toLocaleString() : '$' + v.toFixed(2);
+}
+
+function relTime(iso) {
+  if (!iso) return '';
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60)    return `${Math.floor(s)}s ago`;
+  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') lookupAgent();
+});
+
+function renderAgent(a) {
+  const circumference = 2 * Math.PI * 30;
+  const offset = circumference - (a.score / 100) * circumference;
+  const tierClass = a.tier;
+
+  const signals = [
+    { label: 'Completion rate', val: a.completionRate, tier: a.completionRate >= 80 ? 'high' : a.completionRate >= 50 ? 'medium' : 'low' },
+    { label: 'Payer diversity', val: a.payerDiversity, tier: a.payerDiversity >= 70 ? 'high' : a.payerDiversity >= 35 ? 'medium' : 'low' },
+    { label: 'Consistency', val: a.consistency, tier: a.consistency >= 70 ? 'high' : a.consistency >= 40 ? 'medium' : 'low' },
+    { label: 'Volume score', val: a.volumeScore, tier: a.volumeScore >= 70 ? 'high' : a.volumeScore >= 35 ? 'medium' : 'low' },
+    { label: 'Wallet age', val: a.ageScore, tier: a.ageScore >= 50 ? 'high' : a.ageScore >= 25 ? 'medium' : 'low' },
+  ];
+
+  const html = `
+    <div class="agent-header">
+      <div class="agent-identity">
+        <div class="agent-avatar" style="background:${a.avatarBg}">${a.avatar}</div>
+        <div>
+          <div class="agent-name">${a.name}</div>
+          <div class="agent-wallet">${a.fullWallet}</div>
+        </div>
+      </div>
+      <div class="cred-score-badge">
+        <div class="score-ring">
+          <svg viewBox="0 0 72 72">
+            <circle class="score-ring-bg" cx="36" cy="36" r="30"/>
+            <circle class="score-ring-fill ${tierClass}" cx="36" cy="36" r="30"
+              stroke-dasharray="${circumference}"
+              stroke-dashoffset="${offset}"/>
+          </svg>
+          <div class="score-number ${tierClass}">${a.score}</div>
+        </div>
+        <div class="score-label">CRED Score</div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-cell">
+        <div class="metric-val">${a.tasks.toLocaleString()}</div>
+        <div class="metric-key">Tasks completed</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-val">${a.payers}</div>
+        <div class="metric-key">Unique payers</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-val">${a.volume}</div>
+        <div class="metric-key">Total routed</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-val">${a.age}</div>
+        <div class="metric-key">Wallet age</div>
+      </div>
+    </div>
+
+    <div class="signals-section">
+      <div class="section-title">Signal breakdown</div>
+      ${signals.map(s => `
+        <div class="signal-row">
+          <span class="signal-label">${s.label}</span>
+          <div class="signal-bar-wrap">
+            <div class="signal-bar-fill ${s.tier}" style="width:${s.val}%"></div>
+          </div>
+          <span class="signal-pct">${s.val}%</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="tx-section">
+      <div class="section-title">Recent verified transactions</div>
+      ${a.txs.map(tx => `
+        <div class="tx-row">
+          <span class="tx-status ${tx.ok ? '' : 'fail'}"></span>
+          <span class="tx-hash">${tx.hash}</span>
+          <span class="tx-task">${tx.task}</span>
+          <span class="tx-amount">${tx.amount}</span>
+          <span class="tx-time">${tx.time}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  document.getElementById('agentCard').innerHTML = html;
+  const panel = document.getElementById('resultPanel');
+  panel.classList.add('active');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── TOAST ───────────────────────────────────────────────────
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2800);
+}
+
+function showDocs() {
+  showToast('Docs coming soon — built during Frontier Hackathon');
+}
+
+// ─── LIVE SCORE DRIFT (simulate real-time updates) ────────────
+setInterval(() => {
+  const rows = document.querySelectorAll('#leaderboardBody tr');
+  if (!rows.length) return;
+  const idx = Math.floor(Math.random() * rows.length);
+  rows[idx].style.background = 'rgba(0,255,135,0.04)';
+  setTimeout(() => { rows[idx].style.background = ''; }, 600);
+}, 3000);
+
+</script>
+</body>
+</html>
